@@ -6,6 +6,8 @@
 
 ## 对话框
 
+### 非模态对话框
+
 我们在MainWindow的构造函数里创建了QDialog类型的变量w。
 然后调用w的show函数展示该对话框。
 运行程序后会看到对话框w一闪而逝，然后创建了主窗口。
@@ -39,3 +41,214 @@ MainWindow::MainWindow(QWidget *parent) :
 ```
 
 用new创建QDialog 对象w，并且指明了this(MainWindow)为其父窗口，这样在父窗口关闭或者释放后，其子窗口也会释放。这个原理在之后会讲给大家，QT提供了对象树的机制，保证了父类被释放后子类都会被回收。所以这也是我们指明w的父窗口为MainWindow的意思，如果不指明就需要手动回收w。不回收就会造成内存泄漏。
+
+因为无论w的父窗口是谁，都会随着MainWindow构造函数的结束而释放。那么好用的办法就是通过new创建对话框，这样对话框的空间在堆上，就不会随着构造函数结束而被释放了。
+
+```
+MainWindow::MainWindow(QWidget *parent) :
+    QMainWindow(parent),
+    ui(new Ui::MainWindow)
+{
+    ui->setupUi(this);
+   auto w = new QDialog(this);
+   w->show();
+}
+```
+
+用new创建QDialog 对象w，并且指明了this(MainWindow)为其父窗口，这样在父窗口关闭或者释放后，其子窗口也会释放。这个原理在之后会讲给大家，QT提供了对象树的机制，保证了父类被释放后子类都会被回收。所以这也是我们指明w的父窗口为MainWindow的意思，如果不指明就需要手动回收w。不回收就会造成内存泄漏。
+
+再次运行就可以看到会弹出两个界面，一个是主窗口，一个是对话框了。
+上面的方式创建的都是非模态对话框，所谓非模态对话框就是无论是否操作这个对话框都可以操作其他窗口。也就是说在非模态窗口弹出后并不阻塞其他窗口的消息传递。
+
+### 模态对话框
+
+模态对话框就是当该对话框弹出后会阻塞其他窗口的响应事件，必须先关闭该对话框，其他窗口才会继续响应事件。
+我们改造MainWindow的构造函数，在里边创建一个模态对话框
+
+```
+MainWindow::MainWindow(QWidget *parent) :
+    QMainWindow(parent),
+    ui(new Ui::MainWindow)
+{
+    ui->setupUi(this);
+   auto w = new QDialog(this);
+   w->setModal(true);
+   w->show();
+}
+```
+
+点击运行，弹出一个对话框和主窗口，点击主窗口没有任何反应，点击对话框关闭后才能点击主窗口，所以w就是一个模态对话框。
+
+![image-20240626165344287](D:\QTproject\stuhub\${photo}\image-20240626165344287.png)另外一个创建模态对话框的方式是这样的
+
+```
+MainWindow::MainWindow(QWidget *parent) :
+    QMainWindow(parent),
+    ui(new Ui::MainWindow)
+{
+    ui->setupUi(this);
+    QDialog w(this);
+    w.exec();
+}
+```
+
+这种方式创建的对话框也是模态的，并且不会一闪而逝，主要原因是exec这个函数会阻塞其他界面响应事件。所以直到我们关闭这个对话框后，exec才返回，这样MainWindow的构造函数才继续往下执行。
+
+### 窗口指定
+
+![image-20240626173209255](D:\QTproject\stuhub\${photo}\image-20240626173209255.png)
+
+槽函数的参数个数会小于信号的个数，也就是说slot里面的这个showxxx必须是（）起手，可以无参数，但是一定是小于signal这个函数
+
+这是qt4的链接信号和槽函数的方式
+
+qt4风格的slot和signal只是宏转换，字符串定义不能检测编译错误
+
+![image-20240626174121612](D:\QTproject\stuhub\${photo}\image-20240626174121612.png)
+
+这就错误了
+
+区别不同的联系方式
+
+我们上边用来连接信号和槽的方式是qt4提供的方式，用SIGNAL和SLOT将信号和槽转化为字符串。
+但是这种方式会存在一定问题，Qt要求槽函数的参数不能超过信号定义的参数，比如我们用到的信号clicked(bool)参数就是bool，我们定义的槽函数showChildDialog()是不带参数的，可以连接成功，如果我们在连接的时候将showChildDialog的参数写为3个，也可以连接成功
+
+```
+//qt4 风格的Slot和Signal 只是宏转换，字符串定义不能检测编译错误
+connect(ui->showChildButton, SIGNAL(clicked(bool)), this, SLOT(showChildDialog(1,2,3)));
+```
+
+但是点击会没有反应，说明qt4 这种连接信号和槽的方式不做编译检查，只是将信号和槽函数转译成字符串。
+所以我推荐使用qt5以上版本的连接方式
+
+```
+//推荐qt5 风格
+connect(ui->showChildButton, &QPushButton::clicked, this, &MainWindow::showChildDialog);
+```
+
+这种方式也可以实现信号和槽函数的连接。
+
+在ChildDialog的实现文件里连接槽函数，并且实现子界面隐藏，主界面显示
+
+```cpp
+ChildDialog::ChildDialog(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::ChildDialog),_parent(parent)
+{
+    ui->setupUi(this);
+    connect(ui->showMainWindow, &QPushButton::clicked, this, &ChildDialog::showMainWindow);
+}
+
+void ChildDialog::showMainWindow()
+{
+    qDebug() << "show main window" << endl;
+    _parent->show();
+    this->hide();
+}
+```
+
+修改主界面的槽函数,让主界面隐藏，子界面显示
+
+```cpp
+void MainWindow::showChildDialog()
+{
+    qDebug() << "show child dialog " << endl;
+    _child_dialog->show();
+    this->hide();
+}
+```
+
+运行程序后，点击按钮就可以实现界面的切换。 这么做有一个不好的地方就是在ChildDialog类里保存了MainWindow的指针，如果我们ChildDialog类里要实现和多个其他界面的交互，就需要保存多个指针，这样代码的耦合性太大了。所以我们引入信号和槽机制，当我们点击子界面按钮时发送一个信号给主界面，这样主界面收到该信号后就显示主界面隐藏子界面。 那我们先为ChildDialog类声明一个信号，用来通知主界面显示
+
+```cpp
+class ChildDialog : public QDialog
+{
+    Q_OBJECT
+signals:
+   void showMainSig();
+public:
+    explicit ChildDialog(QWidget *parent = nullptr);
+    ~ChildDialog();
+
+private:
+    Ui::ChildDialog *ui;
+    QWidget *_parent;
+public slots:
+    void showMainWindow();
+};
+```
+
+showMainSig是一个信号，用来通知主界面，所以主界面MainWindow类要连接这个信号，我们先在主界面类中声明这个函数
+
+```cpp
+class MainWindow : public QMainWindow
+{
+    Q_OBJECT
+
+public:
+    explicit MainWindow(QWidget *parent = nullptr);
+    ~MainWindow();
+
+private:
+    Ui::MainWindow *ui;
+public slots:
+    void showChildDialog();
+    void showMainDialog();
+private:
+    ChildDialog *_child_dialog;
+};
+```
+
+showMainDialog 是新增的槽函数，用来连接ChildDialog的showMainSig信号。 我们修改ChildDialog的showMainWindow函数
+
+```cpp
+void ChildDialog::showMainWindow()
+{
+    qDebug() << "show main window" << endl;
+    this->hide();
+    //可以再次发送信号通知主窗口显示
+    emit showMainSig();
+}
+```
+
+然后在MainWindow连接这个信号
+
+```cpp
+MainWindow::MainWindow(QWidget *parent) :
+    QMainWindow(parent),
+    ui(new Ui::MainWindow)
+{
+    ui->setupUi(this);
+    _child_dialog = new ChildDialog(this);
+
+    //推荐qt5 风格
+    connect(ui->showChildButton, &QPushButton::clicked, this, &MainWindow::showChildDialog);
+
+    connect(_child_dialog, &ChildDialog::showMainSig, this, &MainWindow::showMainDialog);
+}
+
+void MainWindow::showChildDialog()
+{
+    qDebug() << "show child dialog " << endl;
+    _child_dialog->show();
+    this->hide();
+}
+```
+
+再次运行程序，点击按钮实现了界面的切换。
+
+### 连接信号
+
+上面的程序还可以进一步优化，因为Qt提供了信号连接信号的方式，也就是说我们可以把子界面的按钮点击信号和showMainSig信号连接起来。
+
+```cpp
+ChildDialog::ChildDialog(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::ChildDialog),_parent(parent)
+{
+    ui->setupUi(this);
+    connect(ui->showMainWindow, &QPushButton::clicked, this, &ChildDialog::showMainSig);
+}
+```
+
+将clicked和showMainSig两个信号连接起来，也可以实现消息的传递，让代码更简洁了。
