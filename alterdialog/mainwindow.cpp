@@ -18,6 +18,7 @@ void MainWindow::on_pushButton_clicked()
     MyDialog mydialog;
     if(mydialog.exec() == QDialog::Accepted ){
         this->show();
+        //作用是显示当前对象（在这里是 MainWindow）的窗口
     }else{
         return;
     }
