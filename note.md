@@ -569,3 +569,308 @@ void MainWindow::on_pushButton_10_clicked()
     wizard.exec();
 }
 ```
+
+## QT QlineEdit
+
+QLineEdit属于输入插件，用来实现单行录入。支持几种录入模式。
+
+Normal表示正常录入,录入的信息会显示在QLineEdit上。
+
+Password表示密码录入的方式，录入的信息不显示QLineEdit，只是通过黑色圆点显示。
+
+NoEcho 表示不显示录入信息，类似于Linux输入密码时，显示的是一片空白。
+
+PasswordEchoOnEdit 表示在输入的一刹那可以看到字符，但是立刻变为不可见的黑色圆点显示。
+
+
+
+
+
+### 实战
+
+我们创建一个QApplication项目，名字叫editline。项目主界面取名MainWindow类，继承于QMainWindow。Qt为我们自动生成ui文件。
+然后在ui界面里添加四个QLineEdit和Label
+
+
+
+![https://cdn.llfc.club/2FqBuQlOvQZm3EIYuEkHHFQvSKV.png](D:\QTproject\stuhub\${photo}\2FqBuQlOvQZm3EIYuEkHHFQvSKV.png)
+
+
+
+我将ip的QLineEdit名字改为ipedit,设置ipedit的输入方式为Normal，这样可以在输入时看到输入的字符。
+我们可以给ipedit设置mask规定输入的字符只能为0~9的数字
+
+```
+ui->ipedit->setEchoMode(QLineEdit::Normal);
+QString ip_mask = "000.000.000.000;_";
+ui->ipedit->setInputMask(ip_mask);
+```
+
+具体的mask规则可以参考Qt官方文档，这里列举一下常见的mask规则![https://cdn.llfc.club/2FqBzfexfBgdO4NzdZa2pLtd4nO.png](D:\QTproject\stuhub\${photo}\2FqBzfexfBgdO4NzdZa2pLtd4nO.png)
+
+
+
+利用上面的规则我们可以编写一些常用的mask
+
+![https://cdn.llfc.club/2FqC2I8jSBa5gkKZJyaNS0SFDTy.png](D:\QTproject\stuhub\${photo}\2FqC2I8jSBa5gkKZJyaNS0SFDTy.png)
+
+接下来我们设置mac地址的mask和录入模式,mac地址的edit被命名为macedit
+
+```
+ui->macedit->setEchoMode(QLineEdit::Normal);
+QString mac_mask = "HH:HH:HH:HH;_";w
+ui->macedit->setInputMask(mac_mask);
+```
+
+通过设置mask，规定mac的输入内容只能为A~F以及0~9的字符。
+
+其实除了通过mask限制edit录入的内容外，还可以通过正则表达式限制,比如我们设置邮箱edit的录入内容
+
+```
+ui->emailedit->setEchoMode(QLineEdit::Normal);
+//设置正则表达式过滤  secondtonone23@163.com
+QRegExp regx("[a-zA-Z0-9_-]+@[a-zA-Z0-9]+\.[a-zA-Z0-9]+");
+QValidator *validator = new QRegExpValidator(regx, ui->emailedit );
+//为什么使用对象树呢，因为qt的规则，放在父窗口，当结束函数之后这个对象就会被回收
+ui->emailedit->setValidator(validator);
+```
+
+我们通过正则表达式限定了有限的规则为 “字符串和数子组合 + @ + 字符串和数子组合 + . + 字符串和数子组合”。
+具体的正则表达式可以去Qt文档查看，也可以看看下边这个图
+
+![https://cdn.llfc.club/2FqC9e5dqJXCsFom1y8vHkCI1Jd.png](D:\QTproject\stuhub\${photo}\2FqC9e5dqJXCsFom1y8vHkCI1Jd.png)
+
+
+
+接下来我们可以设置密码输入框的输入模式为Password，保证录入时不显示密码
+
+```
+ui->passwdedit->setEchoMode(QLineEdit::Password);
+```
+
+## **QT 布局**
+
+Qt 中的布局有三种方式，水平布局，垂直布局，栅格布局。
+
+## 通过ui设置布局
+
+我们先创建一个窗口应用程序，程序名叫layout，基类选择QMainWindow。但我们不使用这个mainwindow，我们创建一个Qt应用程序类Login，Qt会为我们自动生成login.ui文件。我们进入ui文件编辑，添加一个label，提示改为用户: ， 在后边添加一个lineedit控件，按住ctrl鼠标依次点击这两个控件选中后，再点击工具栏的水平布局按钮就可以看到用户label和输入框处于同一水平线了。但是输入框会被拉长，而且label和输入框占满了整个水平空间。这时我们可以通过拖动左侧控件列表中的Horizonal Spacer，将其放入用户标签的左侧，再拖动一个Horizonal Spacer将其放在输入框的右侧，就可以看到用户标签和输入框被挤在中间了，并且两侧留有空间了。Spacer可以设置几种模式，包括fixed，expanding, maximum, minimum等模式。
+依次类推，我们在添加密码标签和输入框，以及登录和注册按钮，通过ui界面的控件调整布局。
+
+![https://cdn.llfc.club/2FqCTk5nDtdOD4uUtFLCa47RMQN.png](D:\QTproject\stuhub\${photo}\2FqCTk5nDtdOD4uUtFLCa47RMQN.png)
+
+
+
+## 通过代码设置布局
+
+上面我们通过ui设置了布局，接下来我们通过代码设置布局，设置注册界面的布局
+注册类的声明如下
+
+```c++
+#ifndef REGISTER_H
+#define REGISTER_H
+
+#include <QDialog>
+#include <memory>
+using namespace std;
+class  Login;
+namespace Ui {
+class Register;
+}
+
+class Register : public QDialog
+{
+    Q_OBJECT
+
+public:
+    explicit Register(QWidget *parent = nullptr);
+    ~Register();
+    void set_login(const  weak_ptr<Login> &_login);
+private:
+    Ui::Register *ui;
+    weak_ptr<Login> _login;
+    QPushButton* _reg_btn;
+public slots:
+    void ShowLogin();
+};
+
+#endif // REGISTER_H
+```
+
+因为要实现登录和注册界面之间的切换，所以Register类包含了Login类的弱指针，Register类的具体实现如下
+
+```c++
+#include "register.h"
+#include "ui_register.h"
+#include <QHBoxLayout>
+#include <QVBoxLayout>
+#include <QLabel>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QSpacerItem>
+
+Register::Register(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::Register)
+{
+    ui->setupUi(this);
+    this->setMaximumSize(QSize(300,350));
+    this->setMinimumSize(QSize(300,350));
+    auto vbox_layout = new QVBoxLayout();
+
+    auto verticalSpacer1 = new QSpacerItem(40,20, QSizePolicy::Minimum, QSizePolicy::Expanding);
+    vbox_layout->addItem(verticalSpacer1);
+    QSpacerItem *name_item1 = new QSpacerItem(40,20, QSizePolicy::Fixed, QSizePolicy::Minimum);
+    QLabel * name_label = new QLabel();
+    name_label->setText("邮箱:");
+    QLineEdit * name_edit = new QLineEdit();
+    auto name_layout = new QHBoxLayout();
+    name_layout->addItem(name_item1);
+    name_layout->addWidget(name_label);
+    name_layout->addWidget(name_edit);
+    QSpacerItem *name_item2 = new QSpacerItem(40,20, QSizePolicy::Fixed, QSizePolicy::Minimum);
+    name_layout->addItem(name_item2);
+    vbox_layout->addLayout(name_layout);
+
+    QLabel * pwd_label = new QLabel();
+    pwd_label->setText("密码:");
+    QLineEdit * pwd_edit = new QLineEdit();
+
+    auto verticalSpacer2 = new QSpacerItem(40,20, QSizePolicy::Maximum, QSizePolicy::Maximum);
+    vbox_layout->addItem(verticalSpacer2);
+    auto pwd_layout = new QHBoxLayout();
+
+    QSpacerItem *pwd_item2 = new QSpacerItem(40,20, QSizePolicy::Fixed, QSizePolicy::Minimum);
+    QSpacerItem *pwd_item1 = new QSpacerItem(40,20, QSizePolicy::Fixed, QSizePolicy::Minimum);
+    pwd_layout->addItem(pwd_item1);
+    pwd_layout->addWidget(pwd_label);
+    pwd_layout->addWidget(pwd_edit);
+    pwd_layout->addItem(pwd_item2);
+    vbox_layout->addLayout(pwd_layout);
+
+    auto verticalSpacer3 = new QSpacerItem(40,30, QSizePolicy::Fixed, QSizePolicy::Maximum);
+    vbox_layout->addItem(verticalSpacer3);
+
+    QSpacerItem* reg_btn_item1 = new QSpacerItem(150,20, QSizePolicy::Fixed, QSizePolicy::Minimum);
+    _reg_btn = new QPushButton();
+    _reg_btn->setText("注册");
+    auto regbtn_layout = new QHBoxLayout();
+    regbtn_layout->addItem(reg_btn_item1);
+    regbtn_layout->addWidget(_reg_btn,5);
+    QSpacerItem* reg_btn_item2 = new QSpacerItem(40,20, QSizePolicy::Fixed, QSizePolicy::Minimum);
+
+    regbtn_layout->addItem(reg_btn_item2);
+    vbox_layout->addLayout(regbtn_layout);
+
+    auto verticalSpacer4 = new QSpacerItem(40,20, QSizePolicy::Fixed, QSizePolicy::Expanding);
+    vbox_layout->addItem(verticalSpacer4);
+    this->setLayout(vbox_layout);
+}
+
+Register::~Register()
+{
+    delete ui;
+}
+
+void Register::set_login(const  weak_ptr<Login> &login){
+    _login = login;
+}
+
+void Register::ShowLogin()
+{
+
+}
+```
+
+**ps:在布局里面加控件我们用**addWidget
+
+
+
+Register的构造函数中用代码的方式创建了一个垂直布局，垂直布局中增加了两个spacer，分别是verticalSpacer1和verticalSpacer4，以及三个水平布局pwd_layout，name_layout以及regbtn_layout，然后分别用代码的方式在三个布局中添加spacer和控件。
+Login类的声明如下
+
+```
+#ifndef LOGIN_H
+#define LOGIN_H
+
+#include <QDialog>
+#include <memory>
+class Register;
+using namespace std;
+namespace Ui {
+class Login;
+}
+
+class Login : public QDialog, public std::enable_shared_from_this<Login>
+{
+    Q_OBJECT
+
+public:
+    explicit Login(QWidget *parent = nullptr);
+    ~Login();
+    void initSignals();
+
+private slots:
+    void on_regBtn_clicked();
+
+private:
+    Ui::Login *ui;
+    std::shared_ptr<Register> _register;
+};
+
+#endif // LOGIN_H
+```
+
+Login实现如下
+
+```
+#include "ui_login.h"
+#include <QBitmap>
+#include <QPainter>
+#include "register.h"
+
+Login::Login(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::Login)
+{
+    ui->setupUi(this);
+}
+
+void Login::initSignals(){
+     _register = make_shared<Register>();
+      //从本类转化为共享的智能指针给register类
+     _register->set_login(shared_from_this());
+}
+
+Login::~Login()
+{
+    delete ui;
+}
+
+void Login::on_regBtn_clicked()
+{
+
+    this->close();
+    _register->show();
+}
+```
+
+main函数的实现如下
+
+```
+#include "login.h"
+#include <QApplication>
+#include <memory>
+using namespace  std;
+int main(int argc, char *argv[])
+{
+    QApplication a(argc, argv);
+    std::shared_ptr<Login> w = make_shared<Login>();
+    w->initSignals();
+    w->show();
+
+    return a.exec();
+}
+```
+
+点击运行按钮，程序运行起来就可以从登录界面切换到注册界面了
